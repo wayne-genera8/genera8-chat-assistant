@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const API_ENDPOINT = "https://mpbgzczhgwiplojqsaiy.supabase.co/functions/v1/chat";
+const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wYmd6Y3poZ3dpcGxvanFzYWl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTgsImV4cCI6MjA5MTAzMzMxOH0.lu8NqnXwhtlLZXUu5x7TwfqLQv7QjMVh7c1dEX5Pu6I";
 
 interface Message {
   role: "user" | "assistant";
@@ -55,7 +56,11 @@ const Index = () => {
       try {
         const response = await fetch(API_ENDPOINT, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            apikey: API_KEY,
+            Authorization: `Bearer ${API_KEY}`,
+          },
           body: JSON.stringify({
             messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
             sessionId,
