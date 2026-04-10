@@ -56,7 +56,11 @@ const Index = () => {
       try {
         const response = await fetch(API_ENDPOINT, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            apikey: API_KEY,
+            Authorization: `Bearer ${API_KEY}`,
+          },
           body: JSON.stringify({
             messages: allMessages.map((m) => ({ role: m.role, content: m.content })),
             sessionId,
