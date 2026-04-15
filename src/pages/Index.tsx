@@ -27,17 +27,29 @@ const Index = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const hasSentInitial = useRef(false);
 
+  // Sanitize URL param: strip control chars, limit length
+  const sanitizeParam = (value: string | null, maxLength = 100): string => {
+    if (!value) return "";
+    return value.replace(/[^\w\s.,'-]/g, "").trim().slice(0, maxLength);
+  };
+
+  const sanitizeSlug = (value: string | null): string => {
+    if (!value) return "lotmanager";
+    const cleaned = value.replace(/[^a-z0-9_-]/gi, "").slice(0, 50).toLowerCase();
+    return cleaned || "lotmanager";
+  };
+
   // Read URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const v: VisitorInfo = {
-      name: params.get("name") || "",
-      dealer: params.get("dealer") || "",
-      country: params.get("country") || "",
-      variant: params.get("variant") || "",
+      name: sanitizeParam(params.get("name")),
+      dealer: sanitizeParam(params.get("dealer")),
+      country: sanitizeParam(params.get("country")),
+      variant: sanitizeParam(params.get("variant"), 20),
     };
     setVisitor(v);
-    setProduct(params.get("product") || "lotmanager");
+    setProduct(sanitizeSlug(params.get("product")));
   }, []);
 
   const scrollToBottom = useCallback(() => {
