@@ -161,7 +161,7 @@ const Index = () => {
     // Don't add to visible messages — send silently
     const hiddenMessages: Message[] = [{ role: "user", content: initialContent }];
     sendToAPI(hiddenMessages);
-  }, [visitor, product, sendToAPI]);
+  }, [visitor, product, sendToAPI, accessChecked, hasAccess]);
 
   const handleSend = () => {
     if (!input.trim() || isStreaming) return;
