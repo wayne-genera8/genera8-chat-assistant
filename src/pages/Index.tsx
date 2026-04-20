@@ -30,7 +30,7 @@ const Index = () => {
   // Sanitize URL param: strip control chars, limit length
   const sanitizeParam = (value: string | null, maxLength = 100): string => {
     if (!value) return "";
-    return value.replace(/[^\w\s.,'-]/g, "").trim().slice(0, maxLength);
+    return value.replace(/[^\w\s.,'&-]/g, "").trim().slice(0, maxLength);
   };
 
   const sanitizeSlug = (value: string | null): string => {
@@ -44,7 +44,7 @@ const Index = () => {
     const params = new URLSearchParams(window.location.search);
     const v: VisitorInfo = {
       name: sanitizeParam(params.get("name")),
-      dealer: sanitizeParam(params.get("dealer")),
+      dealer: sanitizeParam(params.get("company") || params.get("dealer")),
       country: sanitizeParam(params.get("country")),
       variant: sanitizeParam(params.get("variant"), 20),
     };
@@ -137,11 +137,14 @@ const Index = () => {
     if (hasSentInitial.current) return;
     hasSentInitial.current = true;
 
-    let initialContent = "Hi, I clicked through from the email about LotManager.";
+    const channel = visitor.variant.toLowerCase().startsWith("web") ? "SMS" : "email";
+    let initialContent = `Hi, I clicked through from the ${channel} about LotManager.`;
     if (visitor.name && visitor.dealer) {
-      initialContent = `Hi, I clicked through from the email about LotManager. I'm ${visitor.name} from ${visitor.dealer}.`;
+      initialContent = `Hi, I'm ${visitor.name} from ${visitor.dealer}. I clicked through from the ${channel} about LotManager.`;
+    } else if (visitor.dealer) {
+      initialContent = `Hi, I'm from ${visitor.dealer}. I clicked through from the ${channel} about LotManager.`;
     } else if (visitor.name) {
-      initialContent = `Hi, I clicked through from the email about LotManager. I'm ${visitor.name}.`;
+      initialContent = `Hi, I'm ${visitor.name}. I clicked through from the ${channel} about LotManager.`;
     }
 
     // Don't add to visible messages — send silently
