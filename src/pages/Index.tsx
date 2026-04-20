@@ -152,12 +152,6 @@ const Index = () => {
       initialContent = `Hi, I'm ${visitor.name}. I clicked through from the ${channel} about LotManager.`;
     }
 
-    console.log("[chat] raw URL:", window.location.search);
-    console.log("[chat] visitor object:", visitor);
-    console.log("[chat] product:", product);
-    console.log("[chat] channel:", channel);
-    console.log("[chat] initialContent:", initialContent);
-
     // Don't add to visible messages — send silently
     const hiddenMessages: Message[] = [{ role: "user", content: initialContent }];
     sendToAPI(hiddenMessages);
