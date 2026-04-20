@@ -23,6 +23,8 @@ const Index = () => {
   const [sessionId] = useState(() => crypto.randomUUID());
   const [visitor, setVisitor] = useState<VisitorInfo>({ name: "", dealer: "", country: "", variant: "" });
   const [product, setProduct] = useState("lotmanager");
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasSentInitial = useRef(false);
@@ -50,6 +52,8 @@ const Index = () => {
     };
     setVisitor(v);
     setProduct(sanitizeSlug(params.get("product")));
+    setHasAccess(Boolean(v.dealer || v.variant || v.name));
+    setAccessChecked(true);
   }, []);
 
   const scrollToBottom = useCallback(() => {
@@ -134,6 +138,7 @@ const Index = () => {
 
   // Auto-send initial message
   useEffect(() => {
+    if (!accessChecked || !hasAccess) return;
     if (hasSentInitial.current) return;
     hasSentInitial.current = true;
 
@@ -156,7 +161,7 @@ const Index = () => {
     // Don't add to visible messages — send silently
     const hiddenMessages: Message[] = [{ role: "user", content: initialContent }];
     sendToAPI(hiddenMessages);
-  }, [visitor, product, sendToAPI]);
+  }, [visitor, product, sendToAPI, accessChecked, hasAccess]);
 
   const handleSend = () => {
     if (!input.trim() || isStreaming) return;
@@ -173,6 +178,35 @@ const Index = () => {
       handleSend();
     }
   };
+
+  if (!accessChecked) return null;
+
+  if (!hasAccess) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center h-dvh px-6"
+        style={{ background: "#141414" }}
+      >
+        <div className="w-full max-w-[400px] text-center">
+          <div className="flex items-center justify-center mb-8">
+            <span className="text-2xl mr-1.5">⚡</span>
+            <span className="font-bold text-lg" style={{ color: "#36F085" }}>
+              LotManager
+            </span>
+            <span className="ml-1.5 text-sm" style={{ color: "#888" }}>
+              by Genera8
+            </span>
+          </div>
+          <h1 className="text-xl font-semibold mb-3" style={{ color: "#f0f0f0" }}>
+            Invalid access
+          </h1>
+          <p className="text-sm" style={{ color: "#888" }}>
+            This chat requires a valid invitation link.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-dvh max-w-[600px] mx-auto" style={{ background: "#141414" }}>
