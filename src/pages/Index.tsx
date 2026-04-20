@@ -138,6 +138,7 @@ const Index = () => {
 
   // Auto-send initial message
   useEffect(() => {
+    if (!accessChecked || !hasAccess) return;
     if (hasSentInitial.current) return;
     hasSentInitial.current = true;
 
