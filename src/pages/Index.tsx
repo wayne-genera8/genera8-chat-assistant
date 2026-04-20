@@ -23,6 +23,8 @@ const Index = () => {
   const [sessionId] = useState(() => crypto.randomUUID());
   const [visitor, setVisitor] = useState<VisitorInfo>({ name: "", dealer: "", country: "", variant: "" });
   const [product, setProduct] = useState("lotmanager");
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasSentInitial = useRef(false);
@@ -50,6 +52,8 @@ const Index = () => {
     };
     setVisitor(v);
     setProduct(sanitizeSlug(params.get("product")));
+    setHasAccess(Boolean(v.dealer || v.variant || v.name));
+    setAccessChecked(true);
   }, []);
 
   const scrollToBottom = useCallback(() => {
