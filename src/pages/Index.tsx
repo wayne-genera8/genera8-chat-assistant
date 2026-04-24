@@ -13,6 +13,7 @@ interface VisitorInfo {
   dealer: string;
   country: string;
   variant: string;
+  lang: "en" | "es";
 }
 
 const Index = () => {
