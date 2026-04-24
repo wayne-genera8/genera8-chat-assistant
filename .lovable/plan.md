@@ -1,42 +1,65 @@
+# Spanish Language Support — Implementation Plan
 
+## Pre-flight finding
 
-## Fix: Chat not picking up URL personalization
+The `conversations` table already has a `language` column (text, default 'en') — but **no `lang` column**. The spec is explicit that the edge function (deployed separately) writes to `lang`, so the migration is required as specified. The existing `language` column will be left untouched (additive, zero risk).
 
-### Root cause
-The SMS links use `?company=...` but the client reads `?dealer=...`. Result: `visitor.dealer` is always empty, the personalized headline never renders, and the hidden initial prompt to the Edge Function omits the dealer name. The `variant` param IS already being read and forwarded correctly — the variant-based prompt switching on the server works as long as we keep passing it.
+⚠️ If after deployment we see edge function INSERT errors, the column name in the edge function may need to be reconciled with the existing `language` column. Flagging for awareness.
 
-### Changes — `src/pages/Index.tsx` only
+---
 
-1. **Accept `company` as the dealer param** (with `dealer` as a fallback for backward compat):
-   ```ts
-   dealer: sanitizeParam(params.get("company") || params.get("dealer")),
-   ```
+## 1. Database migration
 
-2. **Loosen the dealer/name sanitizer** so multi-word company names survive. Current regex `[^\w\s.,'-]` actually keeps spaces, BUT `URLSearchParams.get` already decodes `+` → space, so "Premium Cars Nairobi" should pass. Verify by adding `&` to the whitelist for names like "Smith & Co". New regex: `[^\w\s.,'&-]`.
+```sql
+alter table conversations
+  add column if not exists lang text default 'en'
+  check (lang in ('en', 'es'));
 
-3. **Generalize the initial hidden prompt** so it doesn't hard-code "email" (SMS visitors arrive via `web*` variants):
-   ```ts
-   const channel = visitor.variant.toLowerCase().startsWith("web") ? "SMS" : "email";
-   let initialContent = `Hi, I clicked through from the ${channel} about LotManager.`;
-   if (visitor.name && visitor.dealer)
-     initialContent = `Hi, I'm ${visitor.name} from ${visitor.dealer}. I clicked through from the ${channel} about LotManager.`;
-   else if (visitor.dealer)
-     initialContent = `Hi, I'm from ${visitor.dealer}. I clicked through from the ${channel} about LotManager.`;
-   else if (visitor.name)
-     initialContent = `Hi, I'm ${visitor.name}. I clicked through from the ${channel} about LotManager.`;
-   ```
-   This gives the Edge Function the dealer name + channel context on turn one, so the AI's first reply is personalized ("Hey! I see you're from Premium Cars Nairobi…").
+create index if not exists idx_conversations_lang on conversations(lang);
+```
 
-4. **Headline already renders when `visitor.dealer` is set** — no change needed beyond fix #1. It will now show "Hi Premium Cars Nairobi — let's talk LotManager".
+Idempotent, additive, no rollback needed.
 
-5. **`visitor` object is already sent on every API call** via `sendToAPI` body (line 76-82) — no change needed.
+---
 
-### Out of scope
-- No Edge Function changes. The server already receives `visitor` and switches prompts on `variant` containing `"web"`.
-- No new visible "system" bubble in the UI. Personalization happens via (a) the headline and (b) the AI's first streamed reply, which is the existing pattern. Adding a fake system bubble would duplicate what the AI already says.
+## 2. Frontend changes — `src/pages/Index.tsx` (only file touched)
 
-### Test plan (after deploy)
-- `https://chat.getlotmanager.com/?company=Test+Motors&variant=web1` → headline reads "Hi Test Motors — let's talk LotManager"; AI opens with a turnkey/7-day pitch mentioning Test Motors.
-- `https://chat.getlotmanager.com/?company=Elite+Auto&variant=1` → headline reads "Hi Elite Auto — let's talk LotManager"; AI opens with the software/dev-team pitch mentioning Elite Auto.
-- `https://chat.getlotmanager.com/` (no params) → generic greeting, no headline, software prompt (default).
+### 2a. Extend `VisitorInfo` interface (line ~10)
+Add `lang: "en" | "es"` field.
 
+### 2b. URL param parsing in the existing `useEffect` (line ~46)
+Add a `sanitizeLang` helper (whitelist: only "es" accepted, everything else → "en") and parse `params.get("lang")` into the visitor object.
+
+### 2c. Set `document.documentElement.lang` (one-liner inside the same useEffect)
+```ts
+document.documentElement.lang = v.lang;
+```
+
+### 2d. Payload forwarding
+No code change needed in `sendToAPI` — `lang` is part of the `visitor` object and is already spread into the request body via `visitor`. ✅
+
+### Skipped (per spec)
+- Page title / meta description: no centralized title management exists in the React tree (no react-helmet, no document.title hook). Skipping per "only if trivial" instruction.
+- No `index.html` changes.
+- No i18n libraries.
+- No UI string translations.
+- No language toggle.
+
+---
+
+## 3. Verification (manual, after deploy)
+
+1. `?company=Test+Motors&variant=1&name=Carlos&lang=es` → Spanish opening (usted register), software pitch
+2. `?company=Test+Motors&variant=web1&name=Carlos&lang=es` → Spanish, turnkey pitch
+3. `?company=Test+Motors&variant=1&name=Carlos` (no lang) → English, software pitch (regression)
+4. DevTools Elements → `<html lang="es">` on Spanish URLs, `<html lang="en">` on English URL
+5. Network tab → POST to `/chat` → request body contains `visitor.lang: "es"`
+6. SQL: `select lang, count(*) from conversations group by lang;` → returns rows with `es` for new Spanish conversations
+
+---
+
+## Files touched
+- 1 migration (new)
+- `src/pages/Index.tsx` (4 small edits)
+
+Total: 1 DB change + 1 frontend file. No other files in scope.
