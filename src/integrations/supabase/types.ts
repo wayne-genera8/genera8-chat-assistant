@@ -100,6 +100,7 @@ export type Database = {
           demo_cal_event_id: string | null
           ended_at: string | null
           id: string
+          lang: string | null
           language: string | null
           last_message_at: string | null
           message_count: number | null
@@ -120,6 +121,7 @@ export type Database = {
           demo_cal_event_id?: string | null
           ended_at?: string | null
           id?: string
+          lang?: string | null
           language?: string | null
           last_message_at?: string | null
           message_count?: number | null
@@ -140,6 +142,7 @@ export type Database = {
           demo_cal_event_id?: string | null
           ended_at?: string | null
           id?: string
+          lang?: string | null
           language?: string | null
           last_message_at?: string | null
           message_count?: number | null
