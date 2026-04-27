@@ -1,65 +1,54 @@
-# Spanish Language Support — Implementation Plan
+# Revert Mexico i18n changes (frontend only)
 
-## Pre-flight finding
+Scope: a single file, `src/pages/Index.tsx`. The Supabase `conversations.lang` column and its index stay in place.
 
-The `conversations` table already has a `language` column (text, default 'en') — but **no `lang` column**. The spec is explicit that the edge function (deployed separately) writes to `lang`, so the migration is required as specified. The existing `language` column will be left untouched (additive, zero risk).
+## Edits to `src/pages/Index.tsx`
 
-⚠️ If after deployment we see edge function INSERT errors, the column name in the edge function may need to be reconciled with the existing `language` column. Flagging for awareness.
+1. **`VisitorInfo` interface (lines 11-17)** — remove `lang: "en" | "es";`. Restore to four fields:
+   ```ts
+   interface VisitorInfo {
+     name: string;
+     dealer: string;
+     country: string;
+     variant: string;
+   }
+   ```
 
----
+2. **Initial `visitor` state (line 25)** — remove `lang: "en"`:
+   ```ts
+   const [visitor, setVisitor] = useState<VisitorInfo>({ name: "", dealer: "", country: "", variant: "" });
+   ```
 
-## 1. Database migration
+3. **`sanitizeLang` helper (lines 46-48)** — delete the function entirely.
 
-```sql
-alter table conversations
-  add column if not exists lang text default 'en'
-  check (lang in ('en', 'es'));
+4. **URL-parsing `useEffect` (lines 51-64)** — remove the `lang` field from the `v` object and remove the `document.documentElement.lang = v.lang;` line. Result:
+   ```ts
+   useEffect(() => {
+     const params = new URLSearchParams(window.location.search);
+     const v: VisitorInfo = {
+       name: sanitizeParam(params.get("name")),
+       dealer: sanitizeParam(params.get("company") || params.get("dealer")),
+       country: sanitizeParam(params.get("country")),
+       variant: sanitizeParam(params.get("variant"), 20),
+     };
+     setVisitor(v);
+     setProduct(sanitizeSlug(params.get("product")));
+     setHasAccess(Boolean(v.dealer || v.variant || v.name));
+     setAccessChecked(true);
+   }, []);
+   ```
 
-create index if not exists idx_conversations_lang on conversations(lang);
-```
+No other lines in the file reference `lang` (verified against the file in context). The `visitor` object passed to the edge function automatically drops `lang` once it's removed from state — no change needed at the fetch call site.
 
-Idempotent, additive, no rollback needed.
+## What is NOT touched
 
----
+- Supabase migration `20260424222410_*.sql` (adds `lang` column + index) — kept.
+- `src/integrations/supabase/types.ts` — generated from DB schema; since the column stays, this file should stay as-is.
+- `index.html`, edge functions, `package.json`, every other file — untouched.
 
-## 2. Frontend changes — `src/pages/Index.tsx` (only file touched)
+## Verification after apply
 
-### 2a. Extend `VisitorInfo` interface (line ~10)
-Add `lang: "en" | "es"` field.
-
-### 2b. URL param parsing in the existing `useEffect` (line ~46)
-Add a `sanitizeLang` helper (whitelist: only "es" accepted, everything else → "en") and parse `params.get("lang")` into the visitor object.
-
-### 2c. Set `document.documentElement.lang` (one-liner inside the same useEffect)
-```ts
-document.documentElement.lang = v.lang;
-```
-
-### 2d. Payload forwarding
-No code change needed in `sendToAPI` — `lang` is part of the `visitor` object and is already spread into the request body via `visitor`. ✅
-
-### Skipped (per spec)
-- Page title / meta description: no centralized title management exists in the React tree (no react-helmet, no document.title hook). Skipping per "only if trivial" instruction.
-- No `index.html` changes.
-- No i18n libraries.
-- No UI string translations.
-- No language toggle.
-
----
-
-## 3. Verification (manual, after deploy)
-
-1. `?company=Test+Motors&variant=1&name=Carlos&lang=es` → Spanish opening (usted register), software pitch
-2. `?company=Test+Motors&variant=web1&name=Carlos&lang=es` → Spanish, turnkey pitch
-3. `?company=Test+Motors&variant=1&name=Carlos` (no lang) → English, software pitch (regression)
-4. DevTools Elements → `<html lang="es">` on Spanish URLs, `<html lang="en">` on English URL
-5. Network tab → POST to `/chat` → request body contains `visitor.lang: "es"`
-6. SQL: `select lang, count(*) from conversations group by lang;` → returns rows with `es` for new Spanish conversations
-
----
-
-## Files touched
-- 1 migration (new)
-- `src/pages/Index.tsx` (4 small edits)
-
-Total: 1 DB change + 1 frontend file. No other files in scope.
+- `rg "lang" src/pages/Index.tsx` returns no matches.
+- `VisitorInfo` has exactly 4 fields.
+- Preview loads, chat works as before.
+- DB query `select column_name from information_schema.columns where table_name='conversations' and column_name='lang'` still returns one row.
