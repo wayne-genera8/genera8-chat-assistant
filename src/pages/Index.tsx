@@ -13,7 +13,6 @@ interface VisitorInfo {
   dealer: string;
   country: string;
   variant: string;
-  lang: "en" | "es";
 }
 
 const Index = () => {
@@ -22,7 +21,7 @@ const Index = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showTyping, setShowTyping] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
-  const [visitor, setVisitor] = useState<VisitorInfo>({ name: "", dealer: "", country: "", variant: "", lang: "en" });
+  const [visitor, setVisitor] = useState<VisitorInfo>({ name: "", dealer: "", country: "", variant: "" });
   const [product, setProduct] = useState("lotmanager");
   const [accessChecked, setAccessChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
@@ -42,10 +41,6 @@ const Index = () => {
     return cleaned || "lotmanager";
   };
 
-  const sanitizeLang = (value: string | null): "en" | "es" => {
-    return value?.toLowerCase().trim() === "es" ? "es" : "en";
-  };
-
   // Read URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -54,12 +49,10 @@ const Index = () => {
       dealer: sanitizeParam(params.get("company") || params.get("dealer")),
       country: sanitizeParam(params.get("country")),
       variant: sanitizeParam(params.get("variant"), 20),
-      lang: sanitizeLang(params.get("lang")),
     };
     setVisitor(v);
     setProduct(sanitizeSlug(params.get("product")));
     setHasAccess(Boolean(v.dealer || v.variant || v.name));
-    document.documentElement.lang = v.lang;
     setAccessChecked(true);
   }, []);
 
