@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const API_ENDPOINT = "https://mpbgzczhgwiplojqsaiy.supabase.co/functions/v1/chat";
+const API_BASE = "https://mpbgzczhgwiplojqsaiy.supabase.co/functions/v1";
 const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wYmd6Y3poZ3dpcGxvanFzYWl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTgsImV4cCI6MjA5MTAzMzMxOH0.lu8NqnXwhtlLZXUu5x7TwfqLQv7QjMVh7c1dEX5Pu6I";
 
 interface Message {
@@ -69,8 +69,10 @@ const Index = () => {
       setIsStreaming(true);
       setShowTyping(true);
 
+      const chatEndpoint = visitor.lang === "es" ? "chat-v2" : "chat";
+
       try {
-        const response = await fetch(API_ENDPOINT, {
+        const response = await fetch(`${API_BASE}/${chatEndpoint}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -222,10 +224,14 @@ const Index = () => {
       {visitor.dealer && (
         <div className="px-5 py-5 shrink-0">
           <h1 className="text-xl font-semibold" style={{ color: "#f0f0f0" }}>
-            Hi {visitor.dealer} — let's talk LotManager
+            {visitor.lang === "es"
+              ? `Hola ${visitor.dealer} — hablemos sobre LotManager`
+              : `Hi ${visitor.dealer} — let's talk LotManager`}
           </h1>
           <p className="mt-1 text-sm" style={{ color: "#888" }}>
-            Ask me anything — I'll answer honestly and we can book a demo if it makes sense.
+            {visitor.lang === "es"
+              ? "Pregúnteme lo que quiera — le respondo con honestidad y, si tiene sentido, agendamos una demo."
+              : "Ask me anything — I'll answer honestly and we can book a demo if it makes sense."}
           </p>
         </div>
       )}
