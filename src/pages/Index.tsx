@@ -231,10 +231,14 @@ const Index = () => {
       {visitor.dealer && (
         <div className="px-5 py-5 shrink-0">
           <h1 className="text-xl font-semibold" style={{ color: "#f0f0f0" }}>
-            Hi {visitor.dealer} — let's talk LotManager
+            {visitor.lang === "es"
+              ? `Hola ${visitor.dealer} — hablemos sobre LotManager`
+              : `Hi ${visitor.dealer} — let's talk LotManager`}
           </h1>
           <p className="mt-1 text-sm" style={{ color: "#888" }}>
-            Ask me anything — I'll answer honestly and we can book a demo if it makes sense.
+            {visitor.lang === "es"
+              ? "Pregúnteme lo que quiera — le respondo con honestidad y, si tiene sentido, agendamos una demo."
+              : "Ask me anything — I'll answer honestly and we can book a demo if it makes sense."}
           </p>
         </div>
       )}
